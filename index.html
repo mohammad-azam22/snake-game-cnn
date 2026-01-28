@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>Serpent Sprint</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+	<style>
+		:root {
+			--bg: #111;
+			--panel: #1a1a1a;
+			--snake: #3ddc97;
+			--food: #ff6b6b;
+			--grid: #222;
+			--text: #eaeaea;
+			--accent: #888;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+			background: radial-gradient(1200px 600px at 70% 0%, #161616 0%, #0d0d0d 60%, #000 100%);
+			color: var(--text);
+			font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell,
+				"Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+		}
+
+		/* ---------- TITLE ---------- */
+
+		.title {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+		}
+
+		.title img {
+			width: 50px;
+		}
+
+		.title img.flip {
+			transform: scaleX(-1);
+		}
+
+		.title h1 {
+			padding: 5px;
+			font-family: cursive;
+			font-size: 50px;
+			background: linear-gradient(#011003, #65dc60);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			margin: 0;
+		}
+
+		/* ---------- LAYOUT ---------- */
+
+		.wrap {
+			width: 50%;
+			margin: auto;
+			min-height: 75%;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 20px;
+			padding: 24px;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.game {
+			display: grid;
+			gap: 12px;
+			justify-items: center;
+		}
+
+		/* ---------- HUD ---------- */
+
+		.hud {
+			display: flex;
+			gap: 16px;
+			align-items: center;
+			background: var(--panel);
+			border: 1px solid #2a2a2a;
+			padding: 8px 12px;
+			border-radius: 10px;
+			box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35),
+				inset 0 1px 0 rgba(255, 255, 255, 0.03);
+		}
+
+		.hud-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 14px;
+			color: var(--accent);
+		}
+
+		.hud-item b {
+			color: var(--text);
+			font-weight: 600;
+		}
+
+		/* ---------- GAME BOARD (FLUID) ---------- */
+
+		.board-wrapper {
+			position: relative;
+			width: min(90vw, 420px);
+			aspect-ratio: 1 / 1;
+		}
+
+		#board {
+			width: 100%;
+			height: 100%;
+			display: block;
+		}
+
+		canvas {
+			background: var(--bg);
+			border-radius: 12px;
+			border: 1px solid #222;
+			box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+				inset 0 1px 0 rgba(255, 255, 255, 0.04);
+		}
+
+		.grid-bg {
+			position: relative;
+		}
+
+		.grid-bg::after {
+			content: "";
+			pointer-events: none;
+			position: absolute;
+			inset: 0;
+			background:
+				linear-gradient(to right, var(--grid) 1px, transparent 1px),
+				linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+			background-size: 20px 20px;
+			border-radius: 12px;
+			mix-blend-mode: lighten;
+			opacity: 0.15;
+		}
+
+		/* ---------- OVERLAY ---------- */
+
+		.overlay {
+			position: absolute;
+			inset: 0;
+			display: none;
+			place-items: center;
+			backdrop-filter: blur(2px);
+			text-align: center;
+		}
+
+		.overlay-content {
+			background: rgba(20, 20, 20, 0.85);
+			border: 1px solid #2a2a2a;
+			padding: 16px 20px;
+			border-radius: 12px;
+			max-width: 280px;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+		}
+
+		.overlay-text {
+			font-size: 16px;
+			margin-bottom: 8px;
+		}
+
+		.overlay-hint {
+			font-size: 13px;
+			color: #bbb;
+		}
+
+		.btn {
+			margin-top: 10px;
+			padding: 8px 12px;
+			border-radius: 8px;
+			background: #2b2b2b;
+			color: var(--text);
+			border: 1px solid #3a3a3a;
+			cursor: pointer;
+		}
+
+		.btn:hover {
+			background: #333;
+		}
+
+		/* ---------- DRAWING CANVAS ---------- */
+
+		.canvas {
+			display: grid;
+			gap: 12px;
+			justify-items: center;
+		}
+
+		#canvas {
+			border: 2px solid #333;
+			background: black;
+			cursor: crosshair;
+			image-rendering: pixelated;
+		}
+
+		.examples {
+			display: flex;
+			gap: 5px;
+		}
+
+		.examples svg {
+			width: 40px;
+			height: 40px;
+			border: 1px solid #fff;
+		}
+
+		.canvas button {
+			height: 40px;
+			width: 120px;
+			font-size: 14px;
+			background: var(--panel);
+			color: var(--text);
+			border-radius: 10px;
+			cursor: pointer;
+			border: 1px solid #3a3a3a;
+		}
+
+		/* ---------- HINT ---------- */
+
+		.hint {
+			font-size: 12px;
+			color: var(--accent);
+			text-align: center;
+		}
+
+		/* ---------- RESPONSIVE ---------- */
+
+		@media screen and (max-width: 768px) {
+			.title h1 {
+				font-size: 22px;
+			}
+
+			.wrap {
+				width: 70%;
+				grid-template-columns: 1fr;
+				grid-template-rows: auto auto;
+			}
+
+			.hud-item {
+				font-size: 12px;
+			}
+
+			.board-wrapper {
+				width: min(90vw, 280px);
+			}
+
+			.overlay-content {
+				max-width: 200px;
+			}
+
+			.hint {
+				font-size: 10px;
+			}
+
+			.overlay-hint {
+				font-size: 10px;
+			}
+
+			.examples svg {
+				height: 20px;
+				width: 20px;
+			}
+
+			/* #canvas {
+				width: 100px;
+				height: 100px;
+			} */
+
+			.canvas button {
+				height: 30px;
+				width: 120px;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="title">
+		<img src="./snake.webp" alt="snake">
+		<h1>Serpent Sprint</h1>
+		<img src="./snake.webp" alt="snake" class="flip">
+	</div>
+
+	<div class="wrap">
+		<div class="game">
+			<div class="hud">
+				<div class="hud-item"><b>Score:</b> <span id="score">0</span></div>
+				<div class="hud-item"><b>Best:</b> <span id="best">0</span></div>
+				<div class="hud-item"><b>Speed:</b> <span id="speed">Normal</span></div>
+			</div>
+
+			<div class="board-wrapper">
+				<canvas id="board" class="grid-bg" width="400" height="400"></canvas>
+
+				<div class="overlay" id="overlay">
+					<div class="overlay-content">
+						<div id="overlayText" class="overlay-text">Paused</div>
+						<div class="overlay-hint">
+							Use arrow keys / WASD or draw ULDR to move • P to pause • R to restart • 1/2/3 to set speed
+						</div>
+						<button class="btn" id="resumeBtn">Resume</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="hint">
+				Use arrow keys / WASD or draw ULDR to move • Press P to pause • Press R to restart • 1/2/3 to change
+				speed.
+			</div>
+		</div>
+
+		<div class="canvas">
+			<div class="examples">
+				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 64 64">
+					<path
+						d="M0 0 C21.12 0 42.24 0 64 0 C64 21.12 64 42.24 64 64 C42.88 64 21.76 64 0 64 C0 42.88 0 21.76 0 0 Z "
+						fill="#000000" transform="translate(0,0)" />
+					<path
+						d="M0 0 C1.7634375 -0.00773437 1.7634375 -0.00773437 3.5625 -0.015625 C7.0704744 0.25544575 9.78837355 0.81623819 13 2.25 C15.18062287 8.7918686 14.3009161 13.27396647 11.5 19.4375 C7.7224564 26.48595194 3.65471553 28.94916905 -3.6875 31.5625 C-6.59059187 32.1650285 -9.05203169 32.42866475 -12 32.25 C-12.87686585 25.51815587 -13.12387197 18.9714632 -13.0625 12.1875 C-13.05573242 10.74600586 -13.05573242 10.74600586 -13.04882812 9.27539062 C-13.03717706 6.93352578 -13.02082025 4.59179819 -13 2.25 C-8.52268535 0.53005596 -4.78853369 -0.02100234 0 0 Z "
+						fill="#000000" transform="translate(26,18.75)" />
+					<path
+						d="M0 0 C2.71968252 3.77733684 2.55739579 8.11500041 2.125 12.5625 C0.19514577 20.96304194 -3.51451108 27.23896251 -10.61328125 32.23828125 C-17.99619254 36.56091843 -25.49258635 36.99277599 -33.875 36.5625 C-33.875 35.2425 -33.875 33.9225 -33.875 32.5625 C-33.215 32.5625 -32.555 32.5625 -31.875 32.5625 C-31.9457373 31.96751709 -32.01647461 31.37253418 -32.08935547 30.75952148 C-32.79665999 24.36083958 -33.02751737 18.05947759 -33 11.625 C-33.00386719 10.69365234 -33.00773437 9.76230469 -33.01171875 8.80273438 C-33.01042969 7.91005859 -33.00914063 7.01738281 -33.0078125 6.09765625 C-33.00668457 5.297229 -33.00555664 4.49680176 -33.00439453 3.67211914 C-32.875 1.5625 -32.875 1.5625 -31.875 -1.4375 C-22.99447647 -4.81209894 -7.89661955 -6.05407499 0 0 Z M-28.875 2.5625 C-28.90445031 5.87498078 -28.92194801 9.18742711 -28.9375 12.5 C-28.94587891 13.42619141 -28.95425781 14.35238281 -28.96289062 15.30664062 C-28.98337786 21.14550303 -28.62929787 26.77163053 -27.875 32.5625 C-20.14452355 31.87227889 -12.3548518 30.48666411 -6.875 24.5625 C-3.21298163 18.29053483 -0.98136917 12.83920822 -1.875 5.5625 C-2.38333238 3.12087433 -2.38333238 3.12087433 -3.875 1.5625 C-7.84728389 0.47914985 -11.71081023 0.39726759 -15.8125 0.375 C-16.99714844 0.36082031 -18.18179687 0.34664062 -19.40234375 0.33203125 C-22.89267466 0.56367301 -25.6251094 1.30719874 -28.875 2.5625 Z "
+						fill="#FBFBFB" transform="translate(41.875,18.4375)" />
+				</svg>
+				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 64 64">
+					<path
+						d="M0 0 C21.12 0 42.24 0 64 0 C64 21.12 64 42.24 64 64 C42.88 64 21.76 64 0 64 C0 42.88 0 21.76 0 0 Z "
+						fill="#000000" transform="translate(0,0)" />
+					<path
+						d="M0 0 C1.98 0 3.96 0 6 0 C5.99214478 0.84425537 5.99214478 0.84425537 5.98413086 1.70556641 C4.9009729 21.28634493 4.9009729 21.28634493 9 40 C9.64026123 39.93417725 10.28052246 39.86835449 10.94018555 39.80053711 C13.85524016 39.50520473 16.77129601 39.22124866 19.6875 38.9375 C20.69490234 38.83373047 21.70230469 38.72996094 22.74023438 38.62304688 C23.71669922 38.52958984 24.69316406 38.43613281 25.69921875 38.33984375 C27.04246216 38.20630493 27.04246216 38.20630493 28.4128418 38.07006836 C31.10245559 37.99722518 33.39116171 38.37297425 36 39 C36 40.98 36 42.96 36 45 C24.64650681 46.21086752 13.43227487 47.38178283 2 47 C-2.32621897 32.0024409 -1.82596118 15.3902442 0 0 Z "
+						fill="#FCFCFC" transform="translate(12,7)" />
+				</svg>
+				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 64 64">
+					<path
+						d="M0 0 C21.12 0 42.24 0 64 0 C64 21.12 64 42.24 64 64 C42.88 64 21.76 64 0 64 C0 42.88 0 21.76 0 0 Z "
+						fill="#000000" transform="translate(0,0)" />
+					<path
+						d="M0 0 C0.99 0.33 1.98 0.66 3 1 C2.90460937 2.24394531 2.80921875 3.48789063 2.7109375 4.76953125 C1.16803186 20.10424234 1.16803186 20.10424234 6.125 34.1875 C9.3695012 36.23294641 11.29412826 36.75029001 15.07421875 36.47265625 C18.58972899 35.60982311 19.93249957 33.8945006 22 31 C25.04493092 24.2983391 25.51904887 17.70977574 25.6875 10.4375 C25.72166016 9.42880859 25.75582031 8.42011719 25.79101562 7.38085938 C25.87263281 4.92068432 25.94205676 2.46082691 26 0 C27.32 0 28.64 0 30 0 C30.08825361 3.47900249 30.14080635 6.95771117 30.1875 10.4375 C30.21263672 11.41138672 30.23777344 12.38527344 30.26367188 13.38867188 C30.35326747 22.31836627 28.75347882 29.9314403 23 37 C19.71979455 39.83290471 17.23424153 41.25138878 12.9375 41.4375 C7.47534207 40.83059356 5.31156638 39.1895602 1.3125 35.5625 C-3.67834181 29.25332261 -3.68831116 18.74687462 -3 11 C-1.56134454 1.56134454 -1.56134454 1.56134454 0 0 Z "
+						fill="#FBFBFB" transform="translate(21,11)" />
+				</svg>
+				<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 64 64">
+					<path
+						d="M0 0 C21.12 0 42.24 0 64 0 C64 21.12 64 42.24 64 64 C42.88 64 21.76 64 0 64 C0 42.88 0 21.76 0 0 Z "
+						fill="#000000" transform="translate(0,0)" />
+					<path
+						d="M0 0 C1.97756185 1.56841113 2.87074867 2.4305955 3.43359375 4.91015625 C3.44493082 11.15688115 2.30710979 16.63048933 -1 22 C-3.4691645 24.37020943 -6.06525188 26.24769894 -9 28 C-5.77668338 31.64374922 -2.07889945 33.89963191 2.07421875 36.33984375 C4 38 4 38 4.89453125 40.56640625 C4.94673828 41.77103516 4.94673828 41.77103516 5 43 C3 45 3 45 0.5 45.25 C-2 45 -2 45 -4 43 C-4 42.01 -4 41.02 -4 40 C-4.56589844 39.73316406 -5.13179687 39.46632812 -5.71484375 39.19140625 C-8.95356112 37.5028442 -11.87568651 35.41120441 -14.87890625 33.33984375 C-17.04891168 31.85075698 -17.04891168 31.85075698 -20 31 C-20.33 35.62 -20.66 40.24 -21 45 C-23.475 45.495 -23.475 45.495 -26 46 C-28.08731766 43.91268234 -27.40029744 39.50390171 -27.53515625 36.6171875 C-27.57813339 35.76955841 -27.62111053 34.92192932 -27.66539001 34.0486145 C-27.75578491 32.24801426 -27.84389632 30.44729819 -27.92993164 28.64648438 C-28.06095587 25.90728168 -28.19877606 23.16848999 -28.33789062 20.4296875 C-28.42488344 18.67970755 -28.5114842 16.92970806 -28.59765625 15.1796875 C-28.63826675 14.36587616 -28.67887726 13.55206482 -28.72071838 12.71359253 C-28.93758634 8.13602038 -29.03938077 3.582698 -29 -1 C-18.10786002 -4.26211299 -10.42474077 -4.67315966 0 0 Z "
+						fill="#FCFCFC" transform="translate(47,13)" />
+					<path
+						d="M0 0 C0.50731767 5.32683552 -0.73281996 7.82526994 -4 12 C-6.41039925 14.70256885 -7.53849574 15.84616525 -11 17 C-13.33299825 17.03954234 -15.66708189 17.04401732 -18 17 C-19.1482685 14.703463 -19.11561175 13.41686833 -19.09765625 10.8671875 C-19.09443359 10.06152344 -19.09121094 9.25585938 -19.08789062 8.42578125 C-19.07951172 7.58402344 -19.07113281 6.74226563 -19.0625 5.875 C-19.05798828 5.02550781 -19.05347656 4.17601562 -19.04882812 3.30078125 C-19.03702874 1.20049091 -19.01909306 -0.8997633 -19 -3 C-11.83078978 -4.64009662 -6.33270625 -3.64130609 0 0 Z "
+						fill="#000000" transform="translate(44,19)" />
+				</svg>
+			</div>
+			<canvas id="canvas" width="256" height="256"></canvas>
+			<button id="ping-button" type="button" onclick="ping()">Ping server</button>
+		</div>
+	</div>
+
+	<script>
+		// ################################# CANVAS LOGIC ###########################################
+		const image_canvas = document.getElementById("canvas");
+		const image_ctx = image_canvas.getContext("2d");
+
+		// Resize canvas to match window size 
+		function resizeCanvas() { 
+			if (window.innerWidth < 768) {
+				image_canvas.width = 100;
+				image_canvas.height = 100;
+				image_ctx.width = 100;
+				image_ctx.height = 100;
+			}
+			else {
+				image_canvas.width = 256;
+				image_canvas.height = 256;
+				image_ctx.width = 256;
+				image_ctx.height = 256;
+			}
+			
+		} 
+		// Call once and also on resize 
+		resizeCanvas(); 
+		window.addEventListener('resize', resizeCanvas);
+
+		image_ctx.lineCap = "round";
+		image_ctx.strokeStyle = "white";
+
+		let drawing = false;
+
+		// Mouse events
+		image_canvas.addEventListener("mousedown", (e) => {
+			drawing = true;
+			image_ctx.beginPath();
+			image_ctx.moveTo(e.offsetX, e.offsetY);
+		});
+
+		image_canvas.addEventListener("mousemove", (e) => {
+			if (!drawing) return;
+			image_ctx.lineWidth = 6;
+			image_ctx.lineTo(e.offsetX, e.offsetY);
+			image_ctx.stroke();
+		});
+
+		image_canvas.addEventListener("mouseup", () => {
+			drawing = false;
+			predict()
+		});
+
+		image_canvas.addEventListener("mouseleave", () => {
+			drawing = false;
+		});
+
+		function clearCanvas() {
+			image_ctx.fillStyle = "black";
+			image_ctx.fillRect(0, 0, image_canvas.width, image_canvas.height);
+		}
+
+		function simulateKeyPress(key) {
+			const event = new KeyboardEvent("keydown", {
+				key: key,
+				code: key,
+				bubbles: true
+			});
+			document.dispatchEvent(event);
+		}
+
+		function predict() {
+			let url = "http://localhost:9696/predict"    // for local hosting
+			url = "https://snake-game-letter-cnn.onrender.com/predict"
+			fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					img: image_canvas.toDataURL()
+				})
+			})
+				.then(res => res.json())
+				.then(data => {
+					const maxKey = Object.keys(data).reduce((a, b) => data[a] > data[b] ? a : b);
+					if (maxKey == "L") simulateKeyPress("ArrowLeft")
+					else if (maxKey == "U") simulateKeyPress("ArrowUp")
+					else if (maxKey == "R") simulateKeyPress("ArrowRight")
+					else if (maxKey == "D") simulateKeyPress("ArrowDown")
+				})
+				.catch(err => console.error(err));
+			clearCanvas()
+		}
+
+		function ping() {
+			const ping_btn = document.getElementById("ping-button");
+			ping_btn.setAttribute("disabled", true);
+			ping_btn.innerText = "Please wait...";
+			const data = image_canvas.toDataURL()
+			clearCanvas()
+
+			let url = "http://localhost:9696/predict"
+			url = "https://snake-game-letter-cnn.onrender.com/predict"
+			fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					img: data
+				})
+			})
+				.then(res => res.json())
+				.then(data => {
+					ping_btn.style.color = "#00ff00";
+					ping_btn.innerText = "Server OK";
+					setTimeout(() => {
+						ping_btn.style.color = "#ffffff";
+						ping_btn.innerText = "Ping Server";
+						ping_btn.removeAttribute("disabled");
+					}, 3000)
+
+				})
+				.catch(err => {
+					ping_btn.style.color = "#ff0000";
+					ping_btn.innerText = "Server Down";
+					console.error(err);
+					setTimeout(() => {
+						ping_btn.style.color = "#ffffff";
+						ping_btn.innerText = "Ping Server";
+						ping_btn.removeAttribute("disabled");
+					}, 3000)
+				});
+		}
+
+		// ################################# GAME LOGIC ###########################################
+		// Config
+		const CELL = 20;            // pixel size per cell
+		const GRID = 20;            // 20x20 grid -> canvas 400x400
+		const START_LEN = 4;
+		const COLORS = { snake: "#3ddc97", food: "#ff6b6b", head: "#2ec4b6" };
+
+		const SPEEDS = {
+			slow: 900,
+			normal: 600,
+			fast: 300
+		};
+
+		// DOM
+		const canvas = document.getElementById("board");
+		const ctx = canvas.getContext("2d");
+		const scoreEl = document.getElementById("score");
+		const bestEl = document.getElementById("best");
+		const speedEl = document.getElementById("speed");
+		const overlay = document.getElementById("overlay");
+		const overlayText = document.getElementById("overlayText");
+		const resumeBtn = document.getElementById("resumeBtn");
+
+		speedEl.addEventListener("click", ()=>{
+			if (speedKey == "slow") {
+				speedEl.textContent = "Normal";
+				speedKey = "normal";
+			}
+			else if (speedKey == "normal") {
+				speedEl.textContent = "Fast";
+				speedKey = "fast";
+			}
+			else {
+				speedEl.textContent = "Slow";
+				speedKey = "slow";
+			}
+			if (!paused && !gameOver) startLoop();
+		})
+
+		// Game state
+		let snake = [];
+		let dir = { x: 1, y: 0 };          // moving right at start
+		let nextDir = { x: 1, y: 0 };      // queued direction
+		let food = { x: 10, y: 10 };
+		let score = 0;
+		let best = Number(localStorage.getItem("snake_best") || 0);
+		let timer = null;
+		let speedKey = "normal";
+		let paused = false;
+		let gameOver = false;
+
+		bestEl.textContent = best.toString();
+		speedEl.textContent = "Normal";
+
+		function init() {
+			score = 0;
+			scoreEl.textContent = "0";
+			gameOver = false;
+			paused = false;
+			overlay.style.display = "none";
+
+			// Initialize snake centered
+			const startX = Math.floor(GRID / 2);
+			const startY = Math.floor(GRID / 2);
+			snake = [];
+			for (let i = START_LEN - 1; i >= 0; i--) {
+				snake.push({ x: startX - i, y: startY });
+			}
+			snake.reverse()
+
+			dir = { x: 1, y: 0 };
+			nextDir = { x: 1, y: 0 };
+			placeFood();
+			startLoop();
+			draw();
+		}
+
+		function startLoop() {
+			stopLoop();
+			timer = setInterval(tick, SPEEDS[speedKey]);
+		}
+
+		function stopLoop() {
+			if (timer) {
+				clearInterval(timer);
+				timer = null;
+			}
+		}
+
+		function tick() {
+			if (paused || gameOver) return;
+
+			// Apply queued direction
+			dir = nextDir;
+
+			// New head position
+			const head = snake[0];
+			const newHead = { x: head.x + dir.x, y: head.y + dir.y };
+
+			// Wall collision
+			if (newHead.x < 0 || newHead.y < 0 || newHead.x >= GRID || newHead.y >= GRID) {
+				endGame();
+				return;
+			}
+
+			// Self collision
+			if (snake.some(seg => seg.x === newHead.x && seg.y === newHead.y)) {
+				endGame();
+				return;
+			}
+
+			// Move snake
+			snake.unshift(newHead);
+
+			// Eat or tail shift
+			if (newHead.x === food.x && newHead.y === food.y) {
+				score += 1;
+				scoreEl.textContent = score.toString();
+				if (score > best) {
+					best = score;
+					localStorage.setItem("snake_best", String(best));
+					bestEl.textContent = best.toString();
+				}
+				placeFood();
+			} else {
+				snake.pop();
+			}
+
+			draw();
+		}
+
+		function endGame() {
+			gameOver = true;
+			stopLoop();
+			overlayText.textContent = "Game Over";
+			resumeBtn.textContent = "Restart";
+			overlay.style.display = "grid";
+		}
+
+		function setPaused(val) {
+			if (gameOver) return;
+			paused = val;
+			overlayText.textContent = "Paused";
+			resumeBtn.textContent = "Resume";
+			overlay.style.display = paused ? "grid" : "none";
+			if (!paused) startLoop();
+			else stopLoop();
+		}
+
+		function placeFood() {
+			let x, y, collides;
+			do {
+				x = Math.floor(Math.random() * GRID);
+				y = Math.floor(Math.random() * GRID);
+				collides = snake.some(seg => seg.x === x && seg.y === y);
+			} while (collides);
+			food = { x, y };
+		}
+
+		function draw() {
+			// Clear
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			// Optional soft grid lines for a retro feel
+			ctx.strokeStyle = "rgba(255,255,255,0.05)";
+			ctx.lineWidth = 1;
+			for (let i = 1; i < GRID; i++) {
+				// vertical
+				ctx.beginPath();
+				ctx.moveTo(i * CELL, 0);
+				ctx.lineTo(i * CELL, GRID * CELL);
+				ctx.stroke();
+				// horizontal
+				ctx.beginPath();
+				ctx.moveTo(0, i * CELL);
+				ctx.lineTo(GRID * CELL, i * CELL);
+				ctx.stroke();
+			}
+
+			// Draw food
+			drawCell(food.x, food.y, COLORS.food);
+
+			// Draw snake
+			for (let i = snake.length - 1; i >= 0; i--) {
+				const seg = snake[i];
+				const color = i === 0 ? COLORS.head : COLORS.snake;
+				drawCell(seg.x, seg.y, color);
+			}
+		}
+
+		function drawCell(x, y, color) {
+			const pad = 2; // rounded cell inset
+			ctx.fillStyle = color;
+			roundRect(
+				x * CELL + pad,
+				y * CELL + pad,
+				CELL - pad * 2,
+				CELL - pad * 2,
+				6
+			);
+			ctx.fill();
+		}
+
+		function roundRect(x, y, w, h, r) {
+			ctx.beginPath();
+			ctx.moveTo(x + r, y);
+			ctx.arcTo(x + w, y, x + w, y + h, r);
+			ctx.arcTo(x + w, y + h, x, y + h, r);
+			ctx.arcTo(x, y + h, x, y, r);
+			ctx.arcTo(x, y, x + w, y, r);
+			ctx.closePath();
+		}
+
+		// Input handling
+		const KEY_DIRS = {
+			ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 },
+			ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 },
+			ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 },
+			ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }
+		};
+
+		document.addEventListener("keydown", (e) => {
+			const k = e.key;
+			if (KEY_DIRS[k]) {
+				const desired = KEY_DIRS[k];
+				// Prevent reversing into itself
+				if (snake.length > 1 && desired.x === -dir.x && desired.y === -dir.y) return;
+				nextDir = desired;
+				e.preventDefault();
+				return;
+			}
+
+			if (k === "p" || k === "P") {
+				setPaused(!paused);
+			} else if (k === "r" || k === "R") {
+				init();
+			} else if (k === "1") {
+				speedKey = "slow";
+				speedEl.textContent = "Slow";
+				if (!paused && !gameOver) startLoop();
+			} else if (k === "2") {
+				speedKey = "normal";
+				speedEl.textContent = "Normal";
+				if (!paused && !gameOver) startLoop();
+			} else if (k === "3") {
+				speedKey = "fast";
+				speedEl.textContent = "Fast";
+				if (!paused && !gameOver) startLoop();
+			}
+		});
+
+		resumeBtn.addEventListener("click", () => {
+			if (gameOver) init();
+			else setPaused(false);
+		});
+
+		// Start
+		init();
+	</script>
+</body>
+
+</html>
