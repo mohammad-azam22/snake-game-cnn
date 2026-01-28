@@ -202,8 +202,9 @@
 			background: black;
 			cursor: crosshair;
 			image-rendering: pixelated;
+			touch-action: none;
 		}
-
+		
 		.examples {
 			display: flex;
 			gap: 5px;
@@ -271,11 +272,6 @@
 				height: 20px;
 				width: 20px;
 			}
-
-			/* #canvas {
-				width: 100px;
-				height: 100px;
-			} */
 
 			.canvas button {
 				height: 30px;
@@ -670,7 +666,6 @@
 				d="M0 0 C1.34493725 0.98433813 2.68020837 1.98219459 4 3 C2.39431334 2.71682074 0.79047953 2.42312209 -0.8125 2.125 C-1.70582031 1.96257812 -2.59914063 1.80015625 -3.51953125 1.6328125 C-6 1 -6 1 -9 -1 C-5.356524 -2.34943556 -3.42442141 -1.7122107 0 0 Z "
 				fill="#ABC122" transform="translate(604,1266)" />
 		</svg>
-		<!-- <img src="./snake.webp" alt="snake" class="flip"> -->
 	</div>
 
 	<div class="wrap">
@@ -813,6 +808,49 @@
 			});
 			document.dispatchEvent(event);
 		}
+
+		function getTouchPos(canvas, touch) {
+			const rect = canvas.getBoundingClientRect();
+			return {
+				x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+				y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+			};
+		}
+
+		image_canvas.addEventListener("touchstart", (e) => {
+			e.preventDefault(); // stop page scroll
+			drawing = true;
+
+			const touch = e.touches[0];
+			const pos = getTouchPos(image_canvas, touch);
+
+			image_ctx.beginPath();
+			image_ctx.moveTo(pos.x, pos.y);
+		}, { passive: false });
+
+		image_canvas.addEventListener("touchmove", (e) => {
+			if (!drawing) return;
+			e.preventDefault();
+
+			const touch = e.touches[0];
+			const pos = getTouchPos(image_canvas, touch);
+
+			image_ctx.lineWidth = 6;
+			image_ctx.lineTo(pos.x, pos.y);
+			image_ctx.stroke();
+		}, { passive: false });
+
+		image_canvas.addEventListener("touchend", (e) => {
+			e.preventDefault();
+			drawing = false;
+			predict();
+		}, { passive: false });
+
+		image_canvas.addEventListener("touchcancel", () => {
+			drawing = false;
+		});
+
+
 
 		function predict() {
 			let url = "http://localhost:9696/predict"    // for local hosting
